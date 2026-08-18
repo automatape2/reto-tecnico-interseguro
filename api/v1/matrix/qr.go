@@ -16,9 +16,9 @@ import (
 	"strings"
 	"time"
 
-	"interseguro/vercel-api/internal/authutil"
-	"interseguro/vercel-api/internal/httpjson"
-	"interseguro/vercel-api/internal/matrix"
+	"interseguro/vercel-api/pkg/authutil"
+	"interseguro/vercel-api/pkg/httpjson"
+	"interseguro/vercel-api/pkg/matrix"
 )
 
 type matrixRequest struct {

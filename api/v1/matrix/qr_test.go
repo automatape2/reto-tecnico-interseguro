@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"interseguro/vercel-api/internal/authutil"
+	"interseguro/vercel-api/pkg/authutil"
 )
 
 const testSecret = "test-secret-do-not-use-in-prod"

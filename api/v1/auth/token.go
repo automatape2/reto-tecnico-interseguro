@@ -10,8 +10,8 @@ import (
 	"strconv"
 	"time"
 
-	"interseguro/vercel-api/internal/authutil"
-	"interseguro/vercel-api/internal/httpjson"
+	"interseguro/vercel-api/pkg/authutil"
+	"interseguro/vercel-api/pkg/httpjson"
 )
 
 type tokenResponse struct {
