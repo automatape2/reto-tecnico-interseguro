@@ -3,6 +3,7 @@
 
   const BASE_URL = window.APP_CONFIG.GO_API_BASE_URL;
   const TOKEN_KEY = 'interseguro_challenge_token';
+  const API_KEY_STORAGE_KEY = 'interseguro_challenge_api_key';
 
   const el = (id) => document.getElementById(id);
 
@@ -12,6 +13,17 @@
 
   function setToken(token) {
     localStorage.setItem(TOKEN_KEY, token);
+  }
+
+  // The API key is remembered in this browser's localStorage only, never in
+  // the page's source - unlike a hardcoded default, it's never shipped to
+  // other visitors of the deployed site.
+  function getSavedApiKey() {
+    return localStorage.getItem(API_KEY_STORAGE_KEY) || '';
+  }
+
+  function saveApiKey(apiKey) {
+    localStorage.setItem(API_KEY_STORAGE_KEY, apiKey);
   }
 
   function setStatus(node, message, kind) {
@@ -142,6 +154,7 @@
         throw new Error(body.error ? body.error.message : `HTTP ${resp.status}`);
       }
       setToken(body.token);
+      saveApiKey(apiKey);
       setStatus(el('authStatus'), 'Token obtenido y guardado.', 'ok');
     } catch (err) {
       setStatus(el('authStatus'), `Error: ${err.message}`, 'error');
@@ -203,4 +216,14 @@
   el('loadExampleBtn').addEventListener('click', () => {
     el('matrixInput').value = '[[12, -51, 4], [6, 167, -68], [-4, 24, -41]]';
   });
+
+  // Convenience: restore a previously entered API key from this browser's
+  // localStorage and fetch a fresh token automatically, so it only needs to
+  // be typed once per browser instead of on every page load. Nothing here
+  // is shipped in the page's source - other visitors see an empty field.
+  const savedApiKey = getSavedApiKey();
+  if (savedApiKey) {
+    el('apiKey').value = savedApiKey;
+    getTokenFromApiKey();
+  }
 })();
