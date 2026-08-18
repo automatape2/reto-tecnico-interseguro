@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>QR + Estadísticas - Interseguro Challenge</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <h1>Factorización QR (rotaciones de Givens) + Estadísticas</h1>
+  <p class="subtitle">
+    El frontend llama únicamente a la API en Go; esta orquesta internamente la llamada a la API en Node.js.
+  </p>
+
+  <section class="panel">
+    <h2>1. Autenticación</h2>
+    <div class="row">
+      <div class="field">
+        <label for="apiKey">X-API-Key (pre-shared key)</label>
+        <input type="password" id="apiKey" placeholder="GO_API_PRESHARED_KEY" />
+      </div>
+      <button id="getTokenBtn" type="button">Obtener token</button>
+    </div>
+    <div class="row" style="margin-top: 0.75rem">
+      <div class="field">
+        <label for="manualToken">...o pega un JWT existente</label>
+        <input type="text" id="manualToken" placeholder="eyJhbGciOi..." />
+      </div>
+      <button id="useManualTokenBtn" type="button" class="secondary">Usar este token</button>
+    </div>
+    <p id="authStatus" class="status"></p>
+  </section>
+
+  <section class="panel">
+    <h2>2. Matriz de entrada</h2>
+    <label for="matrixInput">Matriz rectangular como JSON (array de arrays de números)</label>
+    <textarea id="matrixInput">[[12, -51, 4], [6, 167, -68], [-4, 24, -41]]</textarea>
+    <div class="row" style="margin-top: 0.75rem">
+      <button id="loadExampleBtn" type="button" class="secondary">Cargar ejemplo</button>
+      <button id="submitBtn" type="button">Calcular QR + estadísticas</button>
+    </div>
+    <p id="submitStatus" class="status"></p>
+  </section>
+
+  <section class="panel" id="results">
+    <h2>3. Resultados</h2>
+
+    <div class="matrices">
+      <div class="matrix-block">
+        <h3>Q (ortogonal)</h3>
+        <div id="qTable"></div>
+      </div>
+      <div class="matrix-block">
+        <h3>R (triangular superior)</h3>
+        <div id="rTable"></div>
+      </div>
+    </div>
+
+    <h3 style="margin-top: 1.25rem">Estadísticas por matriz</h3>
+    <table class="stats" id="perMatrixTable">
+      <thead>
+        <tr><th>Matriz</th><th>Filas x Cols</th><th>Máx</th><th>Mín</th><th>Promedio</th><th>Suma</th><th>¿Diagonal?</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <h3 style="margin-top: 1.25rem">Estadísticas globales</h3>
+    <table class="stats" id="overallTable"></table>
+  </section>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -15,6 +15,11 @@ Cliente ──POST /api/v1/matrix/qr──▶ go-api ──POST /api/v1/stats─
 Cliente ◀── { matrices: {Q,R}, statistics, meta } ──┘
 ```
 
+## Dos formas de desplegar esto
+
+1. **Referencia (`go-api/`, `node-api/`, `frontend/`)**: Fiber + Express + Docker/docker-compose, tal como pide el enunciado literalmente. Se despliega en cualquier servicio con soporte de contenedores (Render, Fly.io, ECS, etc.).
+2. **Todo-en-uno en Vercel (`/api`, `/index.html`, raíz del repo)**: Vercel no ejecuta Docker ni servidores persistentes (Fiber usa fasthttp, incompatible con su runtime serverless de Go). Esta variante reutiliza el mismo código de dominio sin framework (`internal/matrix` — la factorización QR es idéntica, byte a byte — y `lib/stats.service.js`) pero expone cada endpoint como una función serverless independiente (`api/v1/matrix/qr.go`, `api/v1/auth/token.go`, `api/v1/stats.js`) más el frontend estático, todo bajo un mismo dominio de Vercel. La función Go de QR llama internamente a la función Node de estadísticas vía HTTPS usando `VERCEL_URL`, preservando la misma orquestación (Go llama a Node, no al revés). Ver sección "Desplegar en Vercel" más abajo.
+
 ---
 
 ## Decisiones de diseño (para sustentar en la entrevista)
@@ -167,7 +172,18 @@ docker compose up --build
 - node-api: http://localhost:4000
 - frontend: http://localhost:8081
 
-> **Nota sobre `go-api/go.sum`:** este repo no incluye `go.sum` versionado porque fue creado sin acceso a un toolchain de Go local para generarlo (ver más abajo). El `Dockerfile` corre `go mod tidy` automáticamente durante el build (requiere acceso a internet en ese paso). Para desarrollo local fuera de Docker, correr `go mod tidy` una vez dentro de `go-api/` antes de `go run`/`go test`.
+## Desplegar en Vercel (todo-en-uno)
+
+Fiber y docker-compose no corren en Vercel (runtime serverless, sin servidor persistente). Para eso existe la variante en la raíz del repo (`/api`, `/index.html`): mismo código de dominio, expuesto como funciones serverless.
+
+1. En [vercel.com](https://vercel.com): **Add New → Project** → importar este repo. Root Directory = `.` (por defecto, no tocar nada).
+2. En **Environment Variables** del proyecto, agregar:
+   - `JWT_SECRET` = un string largo random
+   - `GO_API_PRESHARED_KEY` = otro string random (es el que se usa como `X-API-Key` para pedir el token desde el frontend)
+   - `JWT_EXPIRY_MINUTES` = `60` (opcional, ya tiene default)
+3. **Deploy**. Vercel compila `api/**/*.go` como funciones Go y `api/**/*.js` como funciones Node automáticamente, y sirve `index.html`/`app.js`/`config.js`/`styles.css` como sitio estático — todo bajo el mismo dominio, por lo que no hace falta configurar CORS.
+
+La función `api/v1/matrix/qr.go` llama internamente a `api/v1/stats.js` usando la variable `VERCEL_URL` (inyectada automáticamente por Vercel en cada deploy) para construir la URL — no requiere configuración manual.
 
 ## Tests
 
@@ -180,9 +196,12 @@ cd node-api && npm install && npm test
 
 # integración end-to-end contra el stack levantado con docker compose
 GO_API_PRESHARED_KEY=<tu-key> ./scripts/integration-check.sh
+
+# funciones serverless de Vercel (raíz del repo)
+go build ./... && go test ./internal/... ./api/... -v -cover
 ```
 
-`node-api` fue efectivamente instalado y probado en este entorno (24/24 tests verdes). `go-api` fue escrito y revisado cuidadosamente pero **no pudo compilarse/testearse en este entorno** por no contar con el toolchain de Go instalado — correr `go test ./...` es el primer paso recomendado antes de confiar en el binario.
+Todo lo anterior corrió realmente en este entorno, no es solo revisión de código: `node-api` (24/24 tests), `go-api` (`go vet`/`go build`/`go test` limpios, 100% cobertura en `internal/matrix`), y las funciones de Vercel (`internal/matrix` reutilizado byte a byte, más tests propios de `api/v1/auth` y `api/v1/matrix` — este último incluye un test que ejercita la llamada HTTP interna real hacia un stub que hace de función de estadísticas).
 
 ---
 

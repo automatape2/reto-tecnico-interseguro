@@ -1,0 +1,9 @@
+{
+  "name": "interseguro-vercel-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Node.js serverless function dependencies for the all-in-one Vercel deployment (frontend + Go and Node functions under /api).",
+  "dependencies": {
+    "jsonwebtoken": "^9.0.2"
+  }
+}
