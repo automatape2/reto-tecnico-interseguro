@@ -1,0 +1,50 @@
+services:
+  node-api:
+    build: ./node-api
+    ports:
+      - "${NODE_API_PORT:-4000}:4000"
+    environment:
+      - PORT=4000
+      - JWT_SECRET=${JWT_SECRET}
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:4000/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    networks: [interseguro-net]
+
+  go-api:
+    build: ./go-api
+    ports:
+      - "${GO_API_PORT:-8080}:8080"
+    environment:
+      - PORT=8080
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRY_MINUTES=${JWT_EXPIRY_MINUTES:-60}
+      - GO_API_PRESHARED_KEY=${GO_API_PRESHARED_KEY}
+      - NODE_API_BASE_URL=http://node-api:4000
+      - NODE_API_TIMEOUT_MS=${NODE_API_TIMEOUT_MS:-5000}
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-*}
+    depends_on:
+      node-api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    networks: [interseguro-net]
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "${FRONTEND_PORT:-8081}:80"
+    depends_on:
+      - go-api
+    networks: [interseguro-net]
+
+networks:
+  interseguro-net:
+    driver: bridge
