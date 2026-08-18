@@ -10,6 +10,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"math"
 	"net/http"
 	"os"
@@ -139,9 +141,18 @@ func callStats(r *http.Request, secret string, q, rMat matrix.Matrix) (interface
 	}
 	defer resp.Body.Close()
 
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("reading stats response: %w", err)
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("stats function returned %d: %s", resp.StatusCode, string(respBody))
+	}
+
 	var stats interface{}
-	if err := json.NewDecoder(resp.Body).Decode(&stats); err != nil {
-		return nil, err
+	if err := json.Unmarshal(respBody, &stats); err != nil {
+		return nil, fmt.Errorf("decoding stats response: %w", err)
 	}
 	return stats, nil
 }

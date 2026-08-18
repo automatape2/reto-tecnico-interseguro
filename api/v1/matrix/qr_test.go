@@ -60,6 +60,37 @@ func TestHandler_Success(t *testing.T) {
 	}
 }
 
+// TestHandler_StatsFunctionError guards against the bug where a non-2xx
+// response from the internal /api/v1/stats call (e.g. an auth failure) was
+// silently decoded and returned to the client as if it were valid
+// statistics, instead of surfacing as an error.
+func TestHandler_StatsFunctionError(t *testing.T) {
+	stub := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Write([]byte(`{"error":{"code":"UNAUTHORIZED","message":"invalid or expired token"}}`))
+	}))
+	defer stub.Close()
+
+	os.Setenv("JWT_SECRET", testSecret)
+	os.Unsetenv("VERCEL_URL")
+	t.Cleanup(func() { os.Unsetenv("JWT_SECRET") })
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/matrix/qr", strings.NewReader(`{"matrix":[[4,3],[6,3]]}`))
+	req.Header.Set("Authorization", "Bearer "+validToken(t))
+	req.Host = stub.Listener.Addr().String()
+
+	rec := httptest.NewRecorder()
+	Handler(rec, req)
+
+	if rec.Code != http.StatusBadGateway {
+		t.Fatalf("status = %d, want %d, body = %s", rec.Code, http.StatusBadGateway, rec.Body.String())
+	}
+	if strings.Contains(rec.Body.String(), `"matrices"`) {
+		t.Errorf("a failed stats call must not return a 200-shaped body: %s", rec.Body.String())
+	}
+}
+
 func TestHandler_MissingToken(t *testing.T) {
 	os.Setenv("JWT_SECRET", testSecret)
 	t.Cleanup(func() { os.Unsetenv("JWT_SECRET") })
